@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FM Synth Full FX Chain with Metronome</title>
+<script src="https://cdn.jsdelivr.net/npm/tone@next/build/Tone.js"></script>
+<style>
+body { font-family: Arial,sans-serif; margin:40px; background:#f0f0f0; color:#333; }
+.section { margin-bottom:20px; }
+button { margin-right:10px; padding:10px 20px; font-size:16px; }
+label,input,select { display:block; margin:5px 0; }
+input[type=range],select { width:300px; }
+</style>
+</head>
+<body>
+<h1>FM Synth Full FX Chain + Metronome</h1>
+
+<div class="section"><button id="initAudioBtn">Start AudioContext</button></div>
+<div class="section"><button id="startBtn" disabled>Start</button><button id="stopBtn" disabled>Stop</button></div>
+
+<!-- FM Synth Controls -->
+<div class="section"><h2>FM Synth Controls</h2>
+<label for="carrierWave">Carrier Waveform</label>
+<select id="carrierWave" disabled>
+<option value="sine" selected>Sine</option>
+<option value="triangle">Triangle</option>
+<option value="sawtooth">Sawtooth</option>
+<option value="square">Square</option>
+</select>
+<label for="modWave">Modulator Waveform</label>
+<select id="modWave" disabled>
+<option value="sine" selected>Sine</option>
+<option value="triangle">Triangle</option>
+<option value="sawtooth">Sawtooth</option>
+<option value="square">Square</option>
+</select>
+<label for="harmonicity">Harmonicity: <span id="harmonicityVal">2</span></label>
+<input type="range" id="harmonicity" min="1" max="10" step="1" value="2" disabled>
+<label for="modIndex">Modulation Index: <span id="modIndexVal">32</span></label>
+<input type="range" id="modIndex" min="0" max="50" step="1" value="32" disabled>
+<label for="volume">Master Volume: <span id="volumeVal">0</span> dB</label>
+<input type="range" id="volume" min="-60" max="0" step="1" value="0" disabled>
+</div>
+
+<!-- Manual Trigger -->
+<div class="section">
+  <h2>Manual Trigger</h2>
+  <button id="triggerBtn" disabled>Play FM Synth</button>
+</div>
+
+<!-- Distortion -->
+<div class="section"><h2>Distortion</h2>
+<label for="distAmount">Amount: <span id="distAmountVal">0.5</span></label>
+<input type="range" id="distAmount" min="0" max="1" step="0.01" value="0.5" disabled>
+<label for="oversample">Oversample</label>
+<select id="oversample" disabled>
+<option value="none" selected>None</option>
+<option value="2x">2x</option>
+<option value="4x">4x</option>
+</select>
+<label for="distWet">Wet Mix: <span id="distWetVal">1.0</span></label>
+<input type="range" id="distWet" min="0" max="1" step="0.01" value="1" disabled>
+</div>
+
+<!-- Filter -->
+<div class="section"><h2>High-pass Filter</h2>
+<label for="filterCutoff">Cutoff Frequency: <span id="filterCutoffVal">4186.01</span> Hz</label>
+<input type="range" id="filterCutoff" min="32.7" max="4186.01" step="0.01" value="4186.01" disabled>
+<label for="filterQ">Resonance (Q): <span id="filterQVal">1</span></label>
+<input type="range" id="filterQ" min="0.1" max="20" step="0.1" value="1" disabled>
+<label for="filterType">Filter Type</label>
+<select id="filterType" disabled>
+<option value="lowpass">Low-pass</option>
+<option value="highpass" selected>High-pass</option>
+<option value="bandpass">Band-pass</option>
+<option value="notch">Notch</option>
+<option value="allpass">All-pass</option>
+</select>
+</div>
+
+<!-- EQ3 -->
+<div class="section"><h2>EQ (3-band)</h2>
+<label for="eqLow">Low Gain: <span id="eqLowVal">-100</span> dB</label>
+<input type="range" id="eqLow" min="-100" max="30" step="0.1" value="-100" disabled>
+<label for="eqMid">Mid Gain: <span id="eqMidVal">-100</span> dB</label>
+<input type="range" id="eqMid" min="-100" max="30" step="0.1" value="-100" disabled>
+<label for="eqHigh">High Gain: <span id="eqHighVal">0</span> dB</label>
+<input type="range" id="eqHigh" min="-100" max="30" step="0.1" value="0" disabled>
+</div>
+
+<!-- Compressor -->
+<div class="section"><h2>Compressor</h2>
+<label for="compThreshold">Threshold: <span id="compThresholdVal">-24</span> dB</label>
+<input type="range" id="compThreshold" min="-100" max="0" step="1" value="-24" disabled>
+<label for="compRatio">Ratio: <span id="compRatioVal">4</span>:1</label>
+<input type="range" id="compRatio" min="1" max="20" step="1" value="4" disabled>
+<label for="compAttack">Attack: <span id="compAttackVal">0.005</span> s</label>
+<input type="range" id="compAttack" min="0.001" max="1" step="0.001" value="0.005" disabled>
+<label for="compRelease">Release: <span id="compReleaseVal">0.005</span> s</label>
+<input type="range" id="compRelease" min="0.001" max="2" step="0.001" value="0.005" disabled>
+<label for="compKnee">Knee: <span id="compKneeVal">25</span> dB</label>
+<input type="range" id="compKnee" min="0" max="40" step="1" value="25" disabled>
+</div>
+
+<!-- Reverb -->
+<div class="section"><h2>Reverb</h2>
+<label for="revDecay">Decay: <span id="revDecayVal">4.0</span> s</label>
+<input type="range" id="revDecay" min="0.1" max="10" step="0.1" value="4" disabled>
+<label for="revPreDelay">Pre-delay: <span id="revPreDelayVal">0.00</span> s</label>
+<input type="range" id="revPreDelay" min="0" max="1" step="0.01" value="0" disabled>
+<label for="revWet">Wet Mix: <span id="revWetVal">0.5</span></label>
+<input type="range" id="revWet" min="0" max="1" step="0.01" value="0.5" disabled>
+</div>
+
+<script>
+/* ---------------- FM Synth + FX ---------------- */
+const master = new Tone.Volume(0).toDestination();
+const chordNotes = ["C1","C2","G2","C3"];
+
+// FX chain
+const distortion = new Tone.Distortion({distortion:0.5, oversample:"none", wet:1});
+const filter = new Tone.Filter({type:"highpass", frequency:4186.01, Q:1});
+const eq = new Tone.EQ3(-100, -100, 0);
+const compressor = new Tone.Compressor({threshold:-24, ratio:4, attack:0.005, release:0.005, knee:25});
+const reverb = new Tone.Reverb({decay:4, preDelay:0, wet:0.5});
+
+// Shared gain for all FM voices
+const fmGain = new Tone.Gain(0.5).connect(distortion);
+
+// FM synth polyphony
+const fmPoly = chordNotes.map(() => new Tone.FMSynth({
+  oscillator: { type: "sine", phase: 0 },
+  modulation: { type: "sine", phase: 0, partialCount: 0 },
+  envelope: { attack: 0.0, decay: 0.0, sustain: 1.0, release: 0.0 },
+  modulationEnvelope: { attack: 0.0, decay: 0.0, sustain: 1.0, release: 0.0 },
+  harmonicity: 2,
+  modulationIndex: 32
+}));
+
+// Connect all synths to the shared gain
+fmPoly.forEach(synth => synth.connect(fmGain));
+
+// Connect FX chain
+distortion.connect(filter);
+filter.connect(eq);
+eq.connect(compressor);
+compressor.connect(reverb);
+reverb.connect(master);
+
+    
+/* ---------------- DOM ---------------- */
+const initAudioBtn=document.getElementById("initAudioBtn");
+const startBtn=document.getElementById("startBtn");
+const stopBtn=document.getElementById("stopBtn");
+const triggerBtn = document.getElementById("triggerBtn");
+const carrierWave=document.getElementById("carrierWave");
+const modWave=document.getElementById("modWave");
+const harmonicity=document.getElementById("harmonicity");
+const harmonicityVal=document.getElementById("harmonicityVal");
+const modIndex=document.getElementById("modIndex");
+const modIndexVal=document.getElementById("modIndexVal");
+const volume=document.getElementById("volume");
+const volumeVal=document.getElementById("volumeVal");
+const distAmount=document.getElementById("distAmount");
+const distAmountVal=document.getElementById("distAmountVal");
+const oversample=document.getElementById("oversample");
+const distWet=document.getElementById("distWet");
+const distWetVal=document.getElementById("distWetVal");
+const filterCutoff=document.getElementById("filterCutoff");
+const filterCutoffVal=document.getElementById("filterCutoffVal");
+const filterQ=document.getElementById("filterQ");
+const filterQVal=document.getElementById("filterQVal");
+const filterType=document.getElementById("filterType");
+const eqLow=document.getElementById("eqLow");
+const eqLowVal=document.getElementById("eqLowVal");
+const eqMid=document.getElementById("eqMid");
+const eqMidVal=document.getElementById("eqMidVal");
+const eqHigh=document.getElementById("eqHigh");
+const eqHighVal=document.getElementById("eqHighVal");
+const compThreshold=document.getElementById("compThreshold");
+const compThresholdVal=document.getElementById("compThresholdVal");
+const compRatio=document.getElementById("compRatio");
+const compRatioVal=document.getElementById("compRatioVal");
+const compAttack=document.getElementById("compAttack");
+const compAttackVal=document.getElementById("compAttackVal");
+const compRelease=document.getElementById("compRelease");
+const compReleaseVal=document.getElementById("compReleaseVal");
+const compKnee=document.getElementById("compKnee");
+const compKneeVal=document.getElementById("compKneeVal");
+const revDecay=document.getElementById("revDecay");
+const revDecayVal=document.getElementById("revDecayVal");
+const revPreDelay=document.getElementById("revPreDelay");
+const revPreDelayVal=document.getElementById("revPreDelayVal");
+const revWet=document.getElementById("revWet");
+const revWetVal=document.getElementById("revWetVal");
+
+let audioStarted=false;
+
+/* ---------------- Unlock Audio ---------------- */
+initAudioBtn.addEventListener("click", async () => {
+    if (audioStarted) return;
+
+    await Tone.start(); // unlock audio
+    await reverb.generate(); // generate impulse
+
+    // Prime each FM synth with a very short note
+    const now = Tone.now();
+    fmPoly.forEach(s => s.triggerAttackRelease("C2", "0.001", now));
+
+    [
+      startBtn, stopBtn, triggerBtn,
+      harmonicity, modIndex, volume,
+      carrierWave, modWave,
+      distAmount, oversample, distWet,
+      filterCutoff, filterQ, filterType,
+      eqLow, eqMid, eqHigh,
+      compThreshold, compRatio, compAttack, compRelease, compKnee,
+      revDecay, revPreDelay, revWet
+    ].forEach(el => el.disabled = false);
+
+    initAudioBtn.textContent = "AudioContext Started";
+    initAudioBtn.style.backgroundColor = "#ccc";
+    initAudioBtn.style.cursor = "default";
+    audioStarted = true;
+});
+
+
+
+/* ---------------- Metronome ---------------- */
+Tone.Transport.bpm.value = 140;
+
+// Reset Tone's internal timebase to ensure consistent phase alignment
+Tone.Transport.seconds = 0;
+
+let beatIndex = 0;
+const metroHigh = new Tone.MembraneSynth().toDestination();
+const metroLow = new Tone.MembraneSynth().toDestination();
+const metroLoop = new Tone.Loop((time) => {
+  beatIndex = (beatIndex % 4) + 1;
+  if (beatIndex === 1) {
+    chordNotes.forEach((note, i) => {
+        fmPoly[i].triggerAttack(note, time);
+    });
+    metroHigh.triggerAttackRelease("C4", "16n", time);
+  } else {
+    metroLow.triggerAttackRelease("C3", "16n", time);
+  }
+}, "4n");
+
+/* ---------------- Start / Stop ---------------- */
+startBtn.addEventListener("click",()=>{beatIndex=0; Tone.Transport.start("+0.1"); metroLoop.start(0);});
+stopBtn.addEventListener("click",()=>{Tone.Transport.stop(); metroLoop.stop(); beatIndex=0;});
+stopBtn.addEventListener("click",()=>{Tone.Transport.stop(); metroLoop.stop(); beatIndex=0;});
+
+/* ---------------- Manual Trigger Button ---------------- */
+triggerBtn.addEventListener("click", async () => {
+    await Tone.start(); // ensure context is running
+    const now = Tone.now();
+
+    // Start at 0
+    fmGain.gain.setValueAtTime(0, now);
+    
+    // Fade in from 0 → 1 over 1 second
+    fmGain.gain.linearRampToValueAtTime(1, now + 0.5);
+
+        // Stay at 1 for 3 seconds (from t=1 to t=4)
+    fmGain.gain.setValueAtTime(1, now + 0.5);       // optional, keeps value constant
+    
+    // Fade out from 1 → 0 over 1 second (from t=4 → t=5)
+    fmGain.gain.linearRampToValueAtTime(0, now + 0.5);
+
+    // Trigger all synths
+    fmPoly.forEach((synth, i) => {
+        synth.triggerAttack(chordNotes[i], now);
+        synth.triggerRelease(now + 0.5);
+    });
+});
+
+
+    
+/* ---------------- FM Controls ---------------- */
+harmonicity.addEventListener("input", e => {
+    const val = parseInt(e.target.value);
+    fmPoly.forEach(s => s.set({ harmonicity: val }));
+    harmonicityVal.textContent = val;
+});
+
+modIndex.addEventListener("input", e => {
+    const val = parseFloat(e.target.value);
+    fmPoly.forEach(s => s.set({ modulationIndex: val }));
+    modIndexVal.textContent = val;
+});
+
+volume.addEventListener("input", e => {
+    const val = parseFloat(e.target.value);
+    master.volume.value = val;
+    volumeVal.textContent = val;
+});
+
+carrierWave.addEventListener("change", e => {
+    fmPoly.forEach(s => s.set({ oscillator: { type: e.target.value } }));
+});
+
+modWave.addEventListener("change", e => {
+    fmPoly.forEach(s => s.set({ modulation: { type: e.target.value } }));
+});
+
+/* ---------------- Distortion Controls ---------------- */
+distAmount.addEventListener("input",e=>{const val=parseFloat(e.target.value); distortion.distortion=val; distAmountVal.textContent=val.toFixed(2);});
+oversample.addEventListener("change",e=>distortion.oversample=e.target.value);
+distWet.addEventListener("input",e=>{const val=parseFloat(e.target.value); distortion.wet.value=val; distWetVal.textContent=val.toFixed(2);});
+
+/* ---------------- Filter Controls ---------------- */
+filterCutoff.addEventListener("input",e=>{const val=parseFloat(e.target.value); filter.frequency.value=val; filterCutoffVal.textContent=val.toFixed(2);});
+filterQ.addEventListener("input",e=>{const val=parseFloat(e.target.value); filter.Q.value=val; filterQVal.textContent=val.toFixed(2);});
+filterType.addEventListener("change",e=>filter.type=e.target.value);
+
+/* ---------------- EQ Controls ---------------- */
+eqLow.addEventListener("input",e=>{const val=parseFloat(e.target.value); eq.low.value=val; eqLowVal.textContent=val.toFixed(1);});
+eqMid.addEventListener("input",e=>{const val=parseFloat(e.target.value); eq.mid.value=val; eqMidVal.textContent=val.toFixed(1);});
+eqHigh.addEventListener("input",e=>{const val=parseFloat(e.target.value); eq.high.value=val; eqHighVal.textContent=val.toFixed(1);});
+
+/* ---------------- Compressor Controls ---------------- */
+compThreshold.addEventListener("input",e=>{const val=parseFloat(e.target.value); compressor.threshold.value=val; compThresholdVal.textContent=val;});
+compRatio.addEventListener("input",e=>{const val=parseFloat(e.target.value); compressor.ratio.value=val; compRatioVal.textContent=val;});
+compAttack.addEventListener("input",e=>{const val=parseFloat(e.target.value); compressor.attack.value=val; compAttackVal.textContent=val.toFixed(3);});
+compRelease.addEventListener("input",e=>{const val=parseFloat(e.target.value); compressor.release.value=val; compReleaseVal.textContent=val.toFixed(3);});
+compKnee.addEventListener("input",e=>{const val=parseFloat(e.target.value); compressor.knee.value=val; compKneeVal.textContent=val;});
+
+/* ---------------- Reverb Controls ---------------- */
+revDecay.addEventListener("input",e=>{const val=parseFloat(e.target.value); reverb.decay=val; revDecayVal.textContent=val.toFixed(2);});
+revPreDelay.addEventListener("input",e=>{const val=parseFloat(e.target.value); reverb.preDelay=val; revPreDelayVal.textContent=val.toFixed(3);});
+revWet.addEventListener("input",e=>{const val=parseFloat(e.target.value); reverb.wet.value=val; revWetVal.textContent=val.toFixed(2);});
+</script>
+</body>
+</html>
