@@ -261,18 +261,18 @@ triggerBtn.addEventListener("click", async () => {
     fmGain.gain.setValueAtTime(0, now);
     
     // Fade in from 0 → 1 over 1 second
-    fmGain.gain.linearRampToValueAtTime(1, now + 0.5);
+    fmGain.gain.linearRampToValueAtTime(1, now + 1);
 
         // Stay at 1 for 3 seconds (from t=1 to t=4)
-    fmGain.gain.setValueAtTime(1, now + 0.5);       // optional, keeps value constant
+    fmGain.gain.setValueAtTime(1, now + 4);
     
     // Fade out from 1 → 0 over 1 second (from t=4 → t=5)
-    fmGain.gain.linearRampToValueAtTime(0, now + 0.5);
+    fmGain.gain.linearRampToValueAtTime(0, now + 5);
 
     // Trigger all synths
     fmPoly.forEach((synth, i) => {
         synth.triggerAttack(chordNotes[i], now);
-        synth.triggerRelease(now + 0.5);
+        synth.triggerRelease(now + 5);
     });
 });
 
